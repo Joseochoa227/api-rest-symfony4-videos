@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Constraints\Email;
-
+use Knp\Component\Pager\PaginatorInterface;
 
 use App\Entity\User;
 use App\Entity\Video;
@@ -101,5 +101,59 @@ class VideoController extends AbstractController
         //Devolver respuesta
        
         return $this->resjson($data);
+    }
+
+    public function videos(Request $request, JwtAuth $jwt_auth, PaginatorInterface $paginator){
+        //Recoger la cabecera de autenticacion
+        $token = $request->headers->get('Authorization');
+        //Comprobar el token 
+        $authCheck = $jwt_auth->checkToken($token);
+        //Si es valido
+        if($authCheck){
+            //Conseguir la identidad del usuario
+            $identity = $jwt_auth->checkToken($token, true);    
+            $em = $this->getDoctrine()->getManager();
+
+            //Hacer una consulta para paginar
+            $dql = "SELECT v FROM App\Entity\Video v WHERE v.user = {$identity->sub} ORDER BY v.id DESC";
+            $query = $em->createQuery($dql);
+            //Recoger el parametro page de la URL
+            $page   = $request->query->getInt('page', 1);
+            $items_per_page = 5;
+
+            //Invocar paginacion
+
+            $pagination = $paginator->paginate($query, $page, $items_per_page);
+            $total = $pagination->getTotalItemCount();
+
+            //Preparar array de datos para devolver
+            $data = [
+                'status' => 'success',
+                'code'   =>  200,
+                'total_items_count'  => $total,
+                'page_actual'   => $page,
+                'items_per_page'    => $items_per_page,
+                'total_pages'       => ceil($total/ $items_per_page),
+                'videos'            => $pagination,
+                'user_id'           => $identity->sub
+            ];
+        } else{
+            //Si falla devolver error
+            $data = [
+                'status' => 'error',
+                'code'   =>  400,
+                'message'=> 'No se ha podido cargar la lista de videos'
+            ];
+        }
+        
+        return $this->resjson($data);
+    }
+
+    public function video(Request $request, JwtAuth $jwt_auth, $id = null){
+        $data = [
+            'status' => 'error',
+            'code'   =>  400,
+            'message'=> 'No se ha podido encontrar el video'
+        ];
     }
 }
