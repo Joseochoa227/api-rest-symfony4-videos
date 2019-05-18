@@ -36,7 +36,25 @@ class VideoController extends AbstractController
         ]);
     }
 
-    public function newVideo(Request $request, JwtAuth $jwt_auth){
+    public function create(Request $request, JwtAuth $jwt_auth){
+        //Recoger el token
 
+        //Comprobar si es correcto
+
+        //Recoger datos por POST
+
+        //Recoger el objeto de usuario identificado
+
+        //Comprobar y validar datos
+
+        //Guardar el nuevo video favorito en la base de datos
+
+        //Devolver respuesta
+        $data = [
+            'status' => 'error',
+            'code'   =>  400,
+            'message'=> 'El video no ha podido crearse'
+        ];
+        return $this->resjson($data);
     }
 }
