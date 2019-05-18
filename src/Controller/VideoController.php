@@ -150,10 +150,68 @@ class VideoController extends AbstractController
     }
 
     public function video(Request $request, JwtAuth $jwt_auth, $id = null){
-        $data = [
+        //Sacar el token y comprobar si es correcto
+        $token = $request->headers->get('Authorization');
+        $authCheck = $jwt_auth->checkToken($token);
+
+         //Devolver una respuesta       
+         $data = [
             'status' => 'error',
             'code'   =>  400,
             'message'=> 'No se ha podido encontrar el video'
         ];
+        if($authCheck){
+            
+            //Sacar la identidad del usuario
+            $identity = $jwt_auth->checkToken($token, true);
+            //Sacar el objeto del video en base al ID
+            $video = $this->getDoctrine()->getRepository(Video::class)->findOneBy([
+                'id'    =>  $id
+            ]);
+        //Comprobar si el video existe y si es propiedad del usuario identificado
+            if($video && is_object($video) && $identity->sub == $video->getUser()->getId()){
+                $data = [
+                    'status' => 'success',
+                    'code'   =>  200,
+                    'video'  => $video
+                ];
+            }
+
+        }
+        return $this->resjson($data);
+    }
+
+    public function remove(Request $request, JwtAuth $jwt_auth, $id = null){
+        $token = $request->headers->get('Authorization');
+        $authCheck = $jwt_auth->checkToken($token);
+        $data = [
+            'status' => 'error',
+            'code'   =>  400,
+            'message'  => "Esta mal no encontre el video"
+        ];
+
+        if($authCheck){
+            $identity = $jwt_auth->checkToken($token, true);
+
+            $doctrine = $this->getDoctrine();
+            $em = $doctrine->getManager();
+
+            $video = $doctrine->getRepository(Video::class)->findOneBy([
+                'id'    =>  $id
+            ]);
+            if($video && is_object($video) && $identity->sub == $video->getUser()->getId()){
+                $em->remove($video);
+                $em->flush();
+                $data = [
+                    'status' => 'success',
+                    'code'   =>  200,
+                    'message'  => "Video borrado correctamente",
+                    'video'     => $video
+                ];
+            }
+        }
+        
+        
+        return $this->resjson($data);
     }
 }
