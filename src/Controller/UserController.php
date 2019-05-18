@@ -8,8 +8,11 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Constraints\Email;
+
+
 use App\Entity\User;
 use App\Entity\Video;
+use App\Services\JwtAuth;
 
 class UserController extends AbstractController
 {
@@ -115,14 +118,50 @@ class UserController extends AbstractController
                         'message'=> 'El usuario ya existe'
                     ];
                 }
-
                 //Si no existe, guardarlo en la base de datos
             }
         }
-        
-
         //Hacer respuesta en JSON
+        return $this->resjson($data);
+    }
 
+    public function login(Request $request, JwtAuth $jwt_auth){
+        //Recibir los datos por post
+        $json = $request->get('json', null);
+        $params = json_decode($json);
+       
+        //Array por defecto para devolver
+        $data = [
+            'status'    =>  'error',
+            'code'      =>  400,
+            'message'   =>  'El usuario no se ha podido identificar'
+        ];
+        //Comprobar y validar datos
+        if($json != null){
+            $email =  (!empty($params->email)) ? $params->email : null;
+            $password =  (!empty($params->password)) ? $params->password : null;
+            $gettoken =  (!empty($params->gettoken)) ? $params->gettoken : null;
+
+            $validator = Validation::createValidator();
+            $validate_email = $validator->validate($email,[
+                new Email()
+            ]);
+
+            if(!empty($email) && !empty($password) && count($validate_email) == 0){
+                //Cifrar la contraseña
+                $pwd = hash('sha256', $password);
+                //Si todo es valido, llamaremos a un servicio para identificar al usuario (jwt, token o objeto)
+                if($gettoken){
+                    $signup = $jwt_auth->signup($email, $pwd, $gettoken);
+                }else{
+                    $signup = $jwt_auth->signup($email, $pwd);
+                }
+                return new JsonResponse($signup);
+            }
+        }
+
+       
+//Si nos devuelve todo bien el servicio, respuesta
         return $this->resjson($data);
     }
 }
